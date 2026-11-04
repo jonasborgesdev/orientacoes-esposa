@@ -86,3 +86,88 @@ footer {
   font-size: 0.85rem;
   color: #888;
 }
+
+/* Formulário de respostas */
+form#respostas label {
+  display: block;
+  margin: 16px 0 4px;
+  font-weight: 600;
+}
+
+form#respostas textarea {
+  width: 100%;
+  padding: 12px 12px;
+  font-size: 16px;
+  font-family: inherit;
+  line-height: 1.5;
+  color: var(--texto);
+  background: #fbf9f6;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  resize: vertical;
+}
+
+.orientacao {
+  background: #f2f7f3;
+  border-left: 4px solid var(--destaque);
+  padding: 10px 14px;
+  border-radius: 0 8px 8px 0;
+  font-size: 0.95rem;
+}
+
+.acoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 24px;
+}
+
+.acoes button { flex: 1 1 160px; }
+
+button.secundario {
+  background: #fff;
+  color: var(--destaque);
+  border: 2px solid var(--destaque);
+}
+
+button.terciario {
+  background: #fff;
+  color: #888;
+  border: 2px solid #ccc;
+}
+
+.aviso-acao {
+  margin-top: 12px;
+  padding: 10px 14px;
+  background: #eef6f0;
+  border-radius: 8px;
+  font-weight: 600;
+}
+
+.salvo {
+  margin-top: 10px;
+  font-size: 0.85rem;
+  color: #777;
+}
+
+.prompt {
+  position: relative;
+  margin-top: 12px;
+}
+
+.prompt pre {
+  overflow-x: auto;
+  padding: 16px;
+  background: #f4f1ec;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.prompt button { margin-bottom: 10px; }
+
+ol { padding-left: 22px; }
+ol li { margin: 6px 0; }
