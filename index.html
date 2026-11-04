@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Orientações</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="wrap">
+    <section id="tela-senha" class="card">
+      <h1>Orientações</h1>
+      <p class="sub">Digite a senha que o Jonas passou para você.</p>
+      <form id="form-senha" autocomplete="off">
+        <input type="password" id="senha" placeholder="Senha" autocomplete="current-password" required>
+        <button type="submit">Abrir</button>
+      </form>
+      <p id="erro" class="erro" hidden>Senha incorreta. Confira com o Jonas.</p>
+      <p id="carregando" class="sub" hidden>Carregando...</p>
+    </section>
+
+    <section id="conteudo" class="card" hidden></section>
+  </main>
+  <script src="auth.js"></script>
+</body>
+</html>
