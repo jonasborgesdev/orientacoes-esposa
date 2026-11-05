@@ -136,6 +136,12 @@ button.terciario {
   border: 2px solid #ccc;
 }
 
+button.whatsapp {
+  background: #25d366;
+  color: #10351f;
+  border: 0;
+}
+
 .aviso-acao {
   margin-top: 12px;
   padding: 10px 14px;

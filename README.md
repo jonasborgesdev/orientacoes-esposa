@@ -29,6 +29,12 @@ Quem não tem a senha não consegue ler o conteúdo, mesmo baixando o arquivo.
 3. Faça o commit e o push de `conteudo.enc` (o `.src` é ignorado pelo Git).
 4. O deploy automático publica a versão nova.
 
+## Número do WhatsApp (botão de envio)
+
+O botão "Enviar no WhatsApp" usa o número configurado no `conteudo.src.html`, no
+atributo `data-numero` do botão (formato internacional, só dígitos: `55` + DDD +
+número, ex.: `5524999660042`). Para trocar: edite o arquivo e refaça o build.
+
 ## Como trocar a senha
 
 Rode `node build.js` de novo e digite a **senha nova**. O `conteudo.enc` atualizado

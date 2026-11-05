@@ -336,6 +336,30 @@ function ligarFormulario() {
     return algum ? linhas.join("\n") : null;
   };
 
+  const btnWhats = $("btn-whatsapp");
+  if (btnWhats) {
+    btnWhats.addEventListener("click", () => {
+      const texto = montarTexto();
+      if (!texto) {
+        avisoDeAcao("Nenhuma resposta preenchida ainda. Preencha as etapas primeiro.");
+        return;
+      }
+      const numero = (btnWhats.dataset.numero || "").replace(/\D/g, "");
+      if (numero.length < 12) {
+        avisoDeAcao("WhatsApp do Jonas ainda não configurado nesta página. Use 'Copiar respostas'.");
+        return;
+      }
+      const url = `https://wa.me/${numero}?text=${encodeURIComponent(texto)}`;
+      window.open(url, "_blank", "noopener");
+      avisoDeAcao(
+        "Conversa aberta com a mensagem pronta: é só apertar enviar. " +
+          (lerStorage(CHAVE_FOTO)
+            ? "Se tiver foto, anexe pelo ícone de papelzinho na mesma conversa."
+            : "Se a mensagem não abrir por ser longa, use 'Copiar respostas'.")
+      );
+    });
+  }
+
   const btnCopiar = $("btn-copiar");
   if (btnCopiar) {
     btnCopiar.addEventListener("click", async () => {
