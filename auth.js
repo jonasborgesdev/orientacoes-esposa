@@ -161,17 +161,28 @@ function ligarEtapas() {
   const irPara = (numero) => {
     const n = Math.min(Math.max(Number(numero) || 1, 1), steps.length);
     for (const step of steps) {
-      step.classList.toggle("ativo", Number(step.dataset.step) === n);
+      const ativo = Number(step.dataset.step) === n;
+      step.classList.toggle("ativo", ativo);
+      if (ativo) step.setAttribute("aria-current", "step");
+      else step.removeAttribute("aria-current");
     }
-    if (barra) barra.style.width = `${Math.min(n, total) * (100 / total)}%`;
+    // O card de introdução só interessa na primeira etapa
+    const intro = document.querySelector(".intro");
+    if (intro) intro.hidden = n > 1;
+    const percentual = Math.round(Math.min(n, total) * (100 / total));
+    if (barra) barra.style.transform = `scaleX(${percentual / 100})`;
+    const trilho = barra ? barra.parentElement : null;
+    if (trilho) trilho.setAttribute("aria-valuenow", String(percentual));
     if (rotulo) {
       rotulo.textContent =
         n >= 6
-          ? "Etapa concluída: revise e envie as respostas"
+          ? "Última etapa: envio"
           : `Etapa ${n} de ${total}: ${NOMES_ETAPAS[n] ?? ""}`;
     }
     gravarStorage(CHAVE_STEP, String(n));
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    const semMovimento =
+      window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    window.scrollTo({ top: 0, behavior: semMovimento ? "auto" : "smooth" });
   };
 
   document.addEventListener("click", (evento) => {
@@ -218,7 +229,7 @@ async function processarFoto(file) {
 }
 
 function mostrarFoto(dataUrl) {
-  const preview = $("foto-preview");
+  const preview = garantirPreview();
   const botao = $("foto-remover");
   const status = $("foto-status");
   if (preview) {
@@ -227,6 +238,19 @@ function mostrarFoto(dataUrl) {
   }
   if (botao) botao.hidden = false;
   if (status) status.textContent = "Foto salva neste aparelho. Ela vai junto no download.";
+}
+
+/** O preview é criado só quando existe foto (evita img vazio no DOM). */
+function garantirPreview() {
+  let preview = $("foto-preview");
+  if (preview) return preview;
+  const area = document.querySelector(".foto-area");
+  if (!area) return null;
+  preview = document.createElement("img");
+  preview.id = "foto-preview";
+  preview.alt = "Foto escolhida";
+  area.insertBefore(preview, area.firstChild);
+  return preview;
 }
 
 function ligarFoto() {
@@ -258,7 +282,7 @@ function ligarFoto() {
   if (remover) {
     remover.addEventListener("click", () => {
       apagarStorage(CHAVE_FOTO);
-      const preview = $("foto-preview");
+      const preview = garantirPreview();
       const status = $("foto-status");
       if (preview) {
         preview.src = "";
@@ -415,23 +439,39 @@ function ligarFormulario() {
   const btnLimpar = $("btn-limpar");
   if (btnLimpar) {
     btnLimpar.addEventListener("click", () => {
-      if (!confirm("Apagar TODAS as respostas e a foto salvas neste aparelho?")) return;
-      apagarStorage(CHAVE_RESPOSTAS);
-      apagarStorage(CHAVE_FOTO);
-      apagarStorage(CHAVE_STEP);
-      for (const campo of campos) campo.value = "";
-      const preview = $("foto-preview");
-      const botaoRemover = $("foto-remover");
-      const fotoStatus = $("foto-status");
-      if (preview) {
-        preview.src = "";
-        preview.hidden = true;
-      }
-      if (botaoRemover) botaoRemover.hidden = true;
-      if (fotoStatus) fotoStatus.textContent = "";
-      atualizarStatus("");
-      avisoDeAcao("Tudo apagado deste aparelho.");
-      irParaInicio();
+      // Confirmação inline (mundo visual próprio), sem diálogo nativo do navegador
+      if (document.querySelector(".confirmar-limpar")) return;
+      const bloco = document.createElement("div");
+      bloco.className = "confirmar-limpar";
+      bloco.innerHTML =
+        "<p>Apagar todas as respostas e a foto salvas neste aparelho?</p>" +
+        '<div><button type="button" class="sim">Sim, apagar</button>' +
+        '<button type="button" class="nao">Cancelar</button></div>';
+      btnLimpar.insertAdjacentElement("afterend", bloco);
+
+      bloco.querySelector(".sim").addEventListener("click", () => {
+        apagarStorage(CHAVE_RESPOSTAS);
+        apagarStorage(CHAVE_FOTO);
+        apagarStorage(CHAVE_STEP);
+        for (const campo of campos) campo.value = "";
+        const preview = garantirPreview();
+        const botaoRemover = $("foto-remover");
+        const fotoStatus = $("foto-status");
+        if (preview) {
+          preview.src = "";
+          preview.hidden = true;
+        }
+        if (botaoRemover) botaoRemover.hidden = true;
+        if (fotoStatus) fotoStatus.textContent = "";
+        atualizarStatus("");
+        avisoDeAcao("Tudo apagado deste aparelho.");
+        irParaInicio();
+        bloco.remove();
+      });
+
+      bloco.querySelector(".nao").addEventListener("click", () => {
+        bloco.remove();
+      });
     });
   }
 
@@ -453,12 +493,17 @@ function ligarFormulario() {
 function irParaInicio() {
   const primeiro = document.querySelector('.step[data-step="1"]');
   if (primeiro) {
-    document.querySelectorAll(".step").forEach((s) => s.classList.remove("ativo"));
+    document.querySelectorAll(".step").forEach((s) => {
+      s.classList.remove("ativo");
+      s.removeAttribute("aria-current");
+    });
     primeiro.classList.add("ativo");
+    primeiro.setAttribute("aria-current", "step");
   }
   const barra = $("barra-preenchida");
   const rotulo = $("etapa-atual");
-  if (barra) barra.style.width = "20%";
+  if (barra) barra.style.transform = "scaleX(0.2)";
+  if (barra && barra.parentElement) barra.parentElement.setAttribute("aria-valuenow", "20");
   if (rotulo) rotulo.textContent = "Etapa 1 de 5: Identificação";
 }
 

@@ -29,6 +29,12 @@ Quem não tem a senha não consegue ler o conteúdo, mesmo baixando o arquivo.
 3. Faça o commit e o push de `conteudo.enc` (o `.src` é ignorado pelo Git).
 4. O deploy automático publica a versão nova.
 
+## Se mudar `style.css` ou `auth.js`
+
+Incremente o `?v=` na referência do `index.html` (ex.: `style.css?v=5` → `?v=6`).
+Isso força o navegador a baixar a versão nova em vez de servir a antiga do cache
+(a Sheila pode ter a página em cache no celular).
+
 ## Número do WhatsApp (botão de envio)
 
 O botão "Enviar no WhatsApp" usa o número configurado no `conteudo.src.html`, no
