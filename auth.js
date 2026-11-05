@@ -1,11 +1,55 @@
-// Desbloqueia a página (PBKDF2 + AES-GCM), injeta o conteúdo e liga o
-// formulário de respostas: salvamento automático no aparelho, copiar,
-// baixar arquivo e copiar o prompt da IA.
+// Desbloqueia a página (PBKDF2 + AES-GCM), injeta o conteúdo e controla:
+// etapas com progresso salvo, formulário com salvamento automático no aparelho,
+// foto (redimensionada e salva localmente), copiar/baixar e prompt da IA.
 
 const ITER = 100000;
-const CHAVE_STORAGE = "orientacoes:respostas";
+const CHAVE_RESPOSTAS = "orientacoes:respostas";
+const CHAVE_STEP = "orientacoes:step";
+const CHAVE_FOTO = "orientacoes:foto";
 
 const $ = (id) => document.getElementById(id);
+
+const NOMES_ETAPAS = {
+  1: "Identificação",
+  2: "Formação",
+  3: "Experiência",
+  4: "Autoridade e revisão",
+  5: "Regras editoriais",
+  6: "Envio",
+};
+
+const ROTULOS = {
+  "b1-nome": "Nome completo",
+  "b1-assinatura": "Assinatura (curta)",
+  "b1-cidade": "Cidade/estado",
+  "b1-titulo": "Título profissional",
+  "b2-graduacao": "Graduação",
+  "b2-pos": "Pós/especialização",
+  "b2-cursos": "Cursos complementares",
+  "b2-certificacao": "Certificação",
+  "b2-registro": "Registro em conselho",
+  "b3-anos": "Anos de prática",
+  "b3-onde": "Onde atuou/atuou",
+  "b3-faixa": "Faixa de idade",
+  "b3-resumo": "O que faz e diferencial",
+  "b4-autoriza": "Autoriza publicar?",
+  "b4-assinatura": "Assinatura nos artigos",
+  "b4-ritmo": "Ritmo de revisão",
+  "b4-horario": "Melhor dia/horário",
+  "b4-celular": "Recebe no celular?",
+  "b5-tom": "Confirma tom e regras",
+  "b5-aprovacao": "Confirma aprovação prévia",
+};
+
+const BLOCOS = [
+  ["Bloco 1: Identificação", ["b1-nome", "b1-assinatura", "b1-cidade", "b1-titulo"]],
+  ["Bloco 2: Formação", ["b2-graduacao", "b2-pos", "b2-cursos", "b2-certificacao", "b2-registro"]],
+  ["Bloco 3: Experiência", ["b3-anos", "b3-onde", "b3-faixa", "b3-resumo"]],
+  ["Bloco 4: Autoridade, revisão e ritmo", ["b4-autoriza", "b4-assinatura", "b4-ritmo", "b4-horario", "b4-celular"]],
+  ["Bloco 5: Regras editoriais", ["b5-tom", "b5-aprovacao"]],
+];
+
+/* ---------- criptografia ---------- */
 
 function bytesFromB64(b64) {
   const bin = atob(b64);
@@ -44,21 +88,14 @@ async function desbloquear(senha) {
   return decifrar(senha, arquivo);
 }
 
-function mostrarConteudo(html) {
-  $("tela-senha").hidden = true;
-  const alvo = $("conteudo");
-  alvo.hidden = false;
-  alvo.innerHTML = html;
-  ligarFormulario();
-}
+/* ---------- utilitários ---------- */
 
 async function copiarTexto(texto) {
-  // API moderna (funciona em HTTPS, que é o caso do Pages)
   try {
     await navigator.clipboard.writeText(texto);
     return true;
   } catch {
-    // Fallback: textarea + execCommand (compatível com navegadores mais antigos)
+    // fallback pra navegadores/contextos sem permissão da API moderna
   }
   try {
     const ta = document.createElement("textarea");
@@ -83,40 +120,157 @@ function avisoDeAcao(mensagem) {
   alvo.hidden = false;
   setTimeout(() => {
     alvo.hidden = true;
-  }, 4000);
+  }, 5000);
 }
 
-const ROTULOS = {
-  "b1-nome": "Nome completo",
-  "b1-assinatura": "Assinatura (curta)",
-  "b1-cidade": "Cidade/estado",
-  "b1-titulo": "Título profissional",
-  "b1-foto": "Foto",
-  "b2-graduacao": "Graduação",
-  "b2-pos": "Pós/especialização",
-  "b2-cursos": "Cursos complementares",
-  "b2-certificacao": "Certificação",
-  "b2-registro": "Registro em conselho",
-  "b3-anos": "Anos de prática",
-  "b3-onde": "Onde atuou/atuou",
-  "b3-faixa": "Faixa de idade",
-  "b3-resumo": "O que faz e diferencial",
-  "b4-autoriza": "Autoriza publicar?",
-  "b4-assinatura": "Assinatura nos artigos",
-  "b4-ritmo": "Ritmo de revisão",
-  "b4-horario": "Melhor dia/horário",
-  "b4-celular": "Recebe no celular?",
-  "b5-tom": "Confirma tom e regras",
-  "b5-aprovacao": "Confirma aprovação prévia",
-};
+function lerStorage(chave) {
+  try {
+    return localStorage.getItem(chave);
+  } catch {
+    return null;
+  }
+}
 
-const BLOCOS = [
-  ["Bloco 1: Identificação", ["b1-nome", "b1-assinatura", "b1-cidade", "b1-titulo", "b1-foto"]],
-  ["Bloco 2: Formação", ["b2-graduacao", "b2-pos", "b2-cursos", "b2-certificacao", "b2-registro"]],
-  ["Bloco 3: Experiência", ["b3-anos", "b3-onde", "b3-faixa", "b3-resumo"]],
-  ["Bloco 4: Autoridade, revisão e ritmo", ["b4-autoriza", "b4-assinatura", "b4-ritmo", "b4-horario", "b4-celular"]],
-  ["Bloco 5: Regras editoriais", ["b5-tom", "b5-aprovacao"]],
-];
+function gravarStorage(chave, valor) {
+  try {
+    localStorage.setItem(chave, valor);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function apagarStorage(chave) {
+  try {
+    localStorage.removeItem(chave);
+  } catch {
+    // segue
+  }
+}
+
+/* ---------- etapas (steps) ---------- */
+
+function ligarEtapas() {
+  const steps = Array.from(document.querySelectorAll(".step"));
+  if (steps.length === 0) return;
+
+  const barra = $("barra-preenchida");
+  const rotulo = $("etapa-atual");
+  const total = 5;
+
+  const irPara = (numero) => {
+    const n = Math.min(Math.max(Number(numero) || 1, 1), steps.length);
+    for (const step of steps) {
+      step.classList.toggle("ativo", Number(step.dataset.step) === n);
+    }
+    if (barra) barra.style.width = `${Math.min(n, total) * (100 / total)}%`;
+    if (rotulo) {
+      rotulo.textContent =
+        n >= 6
+          ? "Etapa concluída: revise e envie as respostas"
+          : `Etapa ${n} de ${total}: ${NOMES_ETAPAS[n] ?? ""}`;
+    }
+    gravarStorage(CHAVE_STEP, String(n));
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  document.addEventListener("click", (evento) => {
+    const alvo = evento.target;
+    if (!(alvo instanceof HTMLElement)) return;
+    if (alvo.dataset.proximo) irPara(alvo.dataset.proximo);
+    if (alvo.dataset.anterior) irPara(alvo.dataset.anterior);
+  });
+
+  // Retoma de onde ela parou (pode ser outro dia)
+  irPara(lerStorage(CHAVE_STEP) || 1);
+}
+
+/* ---------- foto ---------- */
+
+function carregarImagem(file) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      resolve(img);
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("não consegui ler a imagem"));
+    };
+    img.src = url;
+  });
+}
+
+async function processarFoto(file) {
+  const img = await carregarImagem(file);
+  const maxLado = 1000;
+  const escala = Math.min(1, maxLado / Math.max(img.width, img.height));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round(img.width * escala));
+  canvas.height = Math.max(1, Math.round(img.height * escala));
+  canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+  const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
+
+  const ok = gravarStorage(CHAVE_FOTO, dataUrl);
+  return { dataUrl, ok };
+}
+
+function mostrarFoto(dataUrl) {
+  const preview = $("foto-preview");
+  const botao = $("foto-remover");
+  const status = $("foto-status");
+  if (preview) {
+    preview.src = dataUrl;
+    preview.hidden = false;
+  }
+  if (botao) botao.hidden = false;
+  if (status) status.textContent = "Foto salva neste aparelho. Ela vai junto no download.";
+}
+
+function ligarFoto() {
+  const input = $("foto");
+  const remover = $("foto-remover");
+  if (!input) return;
+
+  const salva = lerStorage(CHAVE_FOTO);
+  if (salva) mostrarFoto(salva);
+
+  input.addEventListener("change", async () => {
+    const file = input.files && input.files[0];
+    if (!file) return;
+    const status = $("foto-status");
+    if (status) status.textContent = "Salvando a foto...";
+    try {
+      const { dataUrl, ok } = await processarFoto(file);
+      mostrarFoto(dataUrl);
+      if (!ok && status) {
+        status.textContent = "Foto carregada, mas não deu pra salvar neste navegador (pode dar 'Baixar arquivo' agora).";
+      }
+    } catch {
+      if (status) status.textContent = "Não consegui ler essa imagem. Tente outra foto (JPG ou PNG).";
+    } finally {
+      input.value = "";
+    }
+  });
+
+  if (remover) {
+    remover.addEventListener("click", () => {
+      apagarStorage(CHAVE_FOTO);
+      const preview = $("foto-preview");
+      const status = $("foto-status");
+      if (preview) {
+        preview.src = "";
+        preview.hidden = true;
+      }
+      remover.hidden = true;
+      if (status) status.textContent = "Foto removida.";
+    });
+  }
+}
+
+/* ---------- formulário ---------- */
 
 function ligarFormulario() {
   const campos = Array.from(document.querySelectorAll("[data-campo]"));
@@ -125,7 +279,7 @@ function ligarFormulario() {
   // Restaura o que já foi digitado neste aparelho
   let salvo = {};
   try {
-    salvo = JSON.parse(localStorage.getItem(CHAVE_STORAGE) || "{}");
+    salvo = JSON.parse(lerStorage(CHAVE_RESPOSTAS) || "{}");
   } catch {
     salvo = {};
   }
@@ -133,29 +287,36 @@ function ligarFormulario() {
     const valor = salvo[campo.dataset.campo];
     if (valor) campo.value = valor;
   }
+
   const status = $("status-salvo");
-  if (status && Object.keys(salvo).length > 0) {
-    status.textContent = "Continuando de onde você parou (respostas salvas neste aparelho).";
+  const atualizarStatus = (texto) => {
+    if (status) status.textContent = texto;
+  };
+  if (Object.keys(salvo).length > 0) {
+    atualizarStatus("Continuando de onde você parou (respostas salvas neste aparelho).");
   }
 
-  // Salva automático enquanto digita
   let timer;
   const salvar = () => {
     clearTimeout(timer);
     timer = setTimeout(() => {
       const dados = {};
       for (const campo of campos) dados[campo.dataset.campo] = campo.value;
-      try {
-        localStorage.setItem(CHAVE_STORAGE, JSON.stringify(dados));
-        if (status) {
-          status.textContent = `Salvo automaticamente neste aparelho às ${new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}.`;
-        }
-      } catch {
-        if (status) status.textContent = "Não foi possível salvar neste navegador (modo privado?).";
+      if (gravarStorage(CHAVE_RESPOSTAS, JSON.stringify(dados))) {
+        atualizarStatus(
+          `Salvo automaticamente às ${new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })} neste aparelho.`
+        );
+      } else {
+        atualizarStatus("Não foi possível salvar neste navegador (modo privado?).");
       }
     }, 400);
   };
   for (const campo of campos) campo.addEventListener("input", salvar);
+
+  const valorDe = (chave) => {
+    const campo = campos.find((c) => c.dataset.campo === chave);
+    return campo ? campo.value : "";
+  };
 
   const montarTexto = () => {
     const linhas = [
@@ -164,21 +325,15 @@ function ligarFormulario() {
     ];
     let algum = false;
     for (const [titulo, chaves] of BLOCOS) {
-      const itens = chaves.filter((k) => (salvoLocal(k) ?? "").trim());
+      const itens = chaves.filter((k) => valorDe(k).trim());
       if (itens.length === 0) continue;
       algum = true;
       linhas.push(titulo);
-      for (const k of itens) {
-        linhas.push(`${ROTULOS[k]}: ${salvoLocal(k).trim()}`);
-      }
+      for (const k of itens) linhas.push(`${ROTULOS[k]}: ${valorDe(k).trim()}`);
       linhas.push("");
     }
+    if (algum) linhas.push("Foto: acompanha este texto (enviada junto).");
     return algum ? linhas.join("\n") : null;
-  };
-
-  const salvoLocal = (chave) => {
-    const campo = campos.find((c) => c.dataset.campo === chave);
-    return campo ? campo.value : "";
   };
 
   const btnCopiar = $("btn-copiar");
@@ -189,18 +344,25 @@ function ligarFormulario() {
         avisoDeAcao("Nenhuma resposta preenchida ainda.");
         return;
       }
-      try {
-        const ok = await copiarTexto(texto);
-        avisoDeAcao(
-          ok
-            ? "Copiado! Agora é só colar no WhatsApp ou e-mail do Jonas."
-            : "Não deu pra copiar neste navegador. Use 'Baixar arquivo'."
-        );
-      } catch {
-        avisoDeAcao("Não deu pra copiar neste navegador. Use 'Baixar arquivo'.");
-      }
+      const ok = await copiarTexto(texto);
+      avisoDeAcao(
+        ok
+          ? "Copiado! Cole no WhatsApp ou e-mail do Jonas. Se tiver foto, manda ela junto."
+          : "Não deu pra copiar neste navegador. Use 'Baixar arquivo'."
+      );
     });
   }
+
+  const baixar = (nome, blob) => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = nome;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+  };
 
   const btnBaixar = $("btn-baixar");
   if (btnBaixar) {
@@ -210,31 +372,42 @@ function ligarFormulario() {
         avisoDeAcao("Nenhuma resposta preenchida ainda.");
         return;
       }
-      const blob = new Blob([texto], { type: "text/plain;charset=utf-8" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `respostas-esposa-${new Date().toISOString().slice(0, 10)}.txt`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-      avisoDeAcao("Arquivo baixado! Mande pro Jonas pelo WhatsApp ou e-mail.");
+      const hoje = new Date().toISOString().slice(0, 10);
+      baixar(`respostas-esposa-${hoje}.txt`, new Blob([texto], { type: "text/plain;charset=utf-8" }));
+
+      const foto = lerStorage(CHAVE_FOTO);
+      if (foto) {
+        const bin = atob(foto.split(",")[1]);
+        const bytes = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+        baixar(`foto-esposa-${hoje}.jpg`, new Blob([bytes], { type: "image/jpeg" }));
+        avisoDeAcao("Baixados o texto e a foto! Mande os dois pro Jonas (WhatsApp ou e-mail).");
+      } else {
+        avisoDeAcao("Arquivo baixado! Mande pro Jonas (WhatsApp ou e-mail).");
+      }
     });
   }
 
   const btnLimpar = $("btn-limpar");
   if (btnLimpar) {
     btnLimpar.addEventListener("click", () => {
-      if (!confirm("Apagar todas as respostas digitadas neste aparelho?")) return;
-      try {
-        localStorage.removeItem(CHAVE_STORAGE);
-      } catch {
-        // segue
-      }
+      if (!confirm("Apagar TODAS as respostas e a foto salvas neste aparelho?")) return;
+      apagarStorage(CHAVE_RESPOSTAS);
+      apagarStorage(CHAVE_FOTO);
+      apagarStorage(CHAVE_STEP);
       for (const campo of campos) campo.value = "";
-      if (status) status.textContent = "";
-      avisoDeAcao("Tudo apagado.");
+      const preview = $("foto-preview");
+      const botaoRemover = $("foto-remover");
+      const fotoStatus = $("foto-status");
+      if (preview) {
+        preview.src = "";
+        preview.hidden = true;
+      }
+      if (botaoRemover) botaoRemover.hidden = true;
+      if (fotoStatus) fotoStatus.textContent = "";
+      atualizarStatus("");
+      avisoDeAcao("Tudo apagado deste aparelho.");
+      irParaInicio();
     });
   }
 
@@ -243,18 +416,38 @@ function ligarFormulario() {
     btnPrompt.addEventListener("click", async () => {
       const pre = $("texto-prompt");
       if (!pre) return;
-      try {
-        const ok = await copiarTexto(pre.textContent);
-        avisoDeAcao(
-          ok
-            ? "Prompt copiado! Cole numa IA (ChatGPT, Gemini, Copilot)."
-            : "Não deu pra copiar. Selecione o texto do prompt manualmente."
-        );
-      } catch {
-        avisoDeAcao("Não deu pra copiar. Selecione o texto do prompt manualmente.");
-      }
+      const ok = await copiarTexto(pre.textContent);
+      avisoDeAcao(
+        ok
+          ? "Prompt copiado! Cole numa IA (ChatGPT, Gemini, Copilot)."
+          : "Não deu pra copiar. Selecione o texto do prompt manualmente."
+      );
     });
   }
+}
+
+function irParaInicio() {
+  const primeiro = document.querySelector('.step[data-step="1"]');
+  if (primeiro) {
+    document.querySelectorAll(".step").forEach((s) => s.classList.remove("ativo"));
+    primeiro.classList.add("ativo");
+  }
+  const barra = $("barra-preenchida");
+  const rotulo = $("etapa-atual");
+  if (barra) barra.style.width = "20%";
+  if (rotulo) rotulo.textContent = "Etapa 1 de 5: Identificação";
+}
+
+/* ---------- início ---------- */
+
+function mostrarConteudo(html) {
+  $("tela-senha").hidden = true;
+  const alvo = $("conteudo");
+  alvo.hidden = false;
+  alvo.innerHTML = html;
+  ligarEtapas();
+  ligarFormulario();
+  ligarFoto();
 }
 
 async function iniciar() {
