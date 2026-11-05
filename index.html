@@ -2,26 +2,47 @@
 <html lang="pt-BR">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#f5f5f7">
   <title>Orientações</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=6">
+  <!--
+  THESIS: Preencher e enviar com acabamento de produto de referência: ar e
+  tipografia nítida da Apple, usabilidade de app bancário do Nubank (progresso
+  sempre visível, ação grande acessível, feedback imediato). Recusa: formulário
+  web longo em caixa cinza com botões de texto pequeno.
+  OWN-WORLD: fundo #f5f5f7, cards brancos raio 14px com sombra suave única,
+  texto #1d1d1f, accent roxo #820ad1 em ações/progresso/foco, verde #25d366 só
+  no WhatsApp, botões pill com alvo >=48px, system stack.
+  STORY: senha limpa -> etapas curtas com progresso -> conclusão -> envio em 1 toque.
+  FIRST VIEWPORT: senha = cartão centralizado (max 420px), título forte, campo
+  grande, botão pill roxo full-width. Conteúdo = header sticky com barra roxa e
+  "Etapa X de 5", card branco, campos com foco roxo, Próximo pill grande fixo.
+  FORM: formulário mobile-first (task form); superfície única existente; sem roll
+  (mundo pinado pelo brief do dono: Apple + Nubank).
+  -->
 </head>
 <body>
   <main class="wrap">
-    <section id="tela-senha" class="card">
-      <h1>Orientações</h1>
-      <p class="sub">Digite a senha que o Jonas passou para você.</p>
-      <form id="form-senha" autocomplete="off">
-        <input type="password" id="senha" placeholder="Senha" autocomplete="current-password" required>
-        <button type="submit">Abrir</button>
-      </form>
-      <p id="erro" class="erro" hidden>Senha incorreta. Confira com o Jonas.</p>
-      <p id="carregando" class="sub" hidden>Carregando...</p>
+    <section id="tela-senha" class="tela-senha">
+      <div class="cartao-senha">
+        <span class="selo">Acesso restrito</span>
+        <h1>Orientações</h1>
+        <p class="sub">Digite a senha que o Jonas passou para você.</p>
+        <form id="form-senha" autocomplete="off">
+          <label class="sr-only" for="senha">Senha</label>
+          <input type="password" id="senha" placeholder="Senha" autocomplete="current-password" required>
+          <button type="submit" class="btn-primario btn-bloco">Abrir</button>
+        </form>
+        <p id="erro" class="erro" hidden>Senha incorreta. Confira com o Jonas.</p>
+        <p id="carregando" class="sub" hidden>Carregando...</p>
+      </div>
+      <p class="rodape-senha">Conteúdo cifrado. Sem a senha, ninguém lê.</p>
     </section>
 
-    <section id="conteudo" class="card" hidden></section>
+    <section id="conteudo" hidden></section>
   </main>
-  <script src="auth.js"></script>
+  <script src="auth.js?v=6"></script>
 </body>
 </html>
