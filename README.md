@@ -1,5 +1,10 @@
 # Orientações (página protegida por senha)
 
+**Status (05/11/2026): publicado e cifrado com a senha real do dono.**
+URL: `https://jonasborgesdev.github.io/orientacoes-esposa/`
+Fluxo: a esposa preenche (5 etapas, salvas no aparelho) e envia em 1 toque no
+WhatsApp (5524999660042). O `.enc` em produção NÃO é o de teste.
+
 Página simples com as orientações de preenchimento dos dados da especialista
 (esposa do Jonas), publicada no GitHub Pages com **conteúdo cifrado (AES-GCM)**.
 Quem não tem a senha não consegue ler o conteúdo, mesmo baixando o arquivo.
